@@ -21,7 +21,7 @@ test('browser console completes mutual readiness, QR, gated reveal and block',as
   await b.getByRole('button',{name:'Connect and share synthetic profile'}).click();
   await expect(a.locator('pre').first()).toContainText('connected');
   await a.getByRole('button',{name:'Fetch authorized profile'}).click();await expect(a).toContainText('Synthetic café participant');
-  await a.getByRole('button',{name:'Block pair',exact:true}).click();await expect(a.locator('pre').first()).toContainText('blocked');
+  await a.getByRole('button',{name:'Block pair',exact:true}).click();await expect(a.locator('pre').first()).toContainText('closed');
   await b.getByRole('button',{name:'Fetch authorized profile'}).click();await expect(page.locator('#result')).toHaveText('Profile is hidden');
   expect(errors).toEqual([]);
   await page.screenshot({path:'artifacts/prototype-console.png',fullPage:true});

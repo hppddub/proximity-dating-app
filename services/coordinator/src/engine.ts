@@ -79,7 +79,8 @@ export class Engine {
   private view(o:Offer,id:string) {
     const validCue=o.state==='ready' && o.expiresAt>this.now() && this.pairFresh(o);
     const job=this.store.all<Outbox>('outbox').find(j=>j.offer===o.id&&j.device===id);
-    return {notificationStatus:job?.status??'none',id:o.id,state:o.state,created:o.created,expiresAt:o.expiresAt,ready:o.ready.includes(id),confirmed:o.confirms.includes(id),scanned:o.scanned,simulated:o.simulated,...(validCue?{cue:o.cue}:{} )};
+    const publicState=['expired','declined','cancelled','disconnected','blocked'].includes(o.state)?'closed':o.state;
+    return {notificationStatus:job?.status??'none',id:o.id,state:publicState,created:o.created,expiresAt:o.expiresAt,ready:o.ready.includes(id),confirmed:o.confirms.includes(id),scanned:o.scanned,simulated:o.simulated,...(validCue?{cue:o.cue}:{} )};
   }
   private pairFresh(o:Offer) {
     const e=this.store.get<{last:number}>('encounter',pairKey(o.a,o.b));

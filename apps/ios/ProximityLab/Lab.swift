@@ -4,7 +4,14 @@ import Security
 import Combine
 import UserNotifications
 
+private final class NoRedirects: NSObject, URLSessionTaskDelegate {
+    func urlSession(_ session:URLSession,task:URLSessionTask,willPerformHTTPRedirection response:HTTPURLResponse,newRequest request:URLRequest,completionHandler:@escaping (URLRequest?)->Void) {completionHandler(nil)}
+}
 final class Lab: ObservableObject {
+    private static let transport:URLSession = {
+        let config=URLSessionConfiguration.ephemeral;config.httpShouldSetCookies=false;config.httpCookieAcceptPolicy = .never
+        return URLSession(configuration:config,delegate:NoRedirects(),delegateQueue:nil)
+    }()
     static let shared = Lab()
     @Published var credentials: [String: String] = [:]
     @Published var session: [String: Any]?
@@ -57,7 +64,7 @@ final class Lab: ObservableObject {
         request.setValue("application/json",forHTTPHeaderField:"Content-Type")
         if auth {request.setValue("Bearer \(credentials["token"] ?? "")",forHTTPHeaderField:"Authorization")}
         if let body=body {request.httpMethod="POST";request.httpBody=try JSONSerialization.data(withJSONObject:body)}
-        let (data,response)=try await URLSession.shared.data(for:request)
+        let (data,response)=try await Self.transport.data(for:request)
         guard let result=try JSONSerialization.jsonObject(with:data) as? [String:Any] else {throw failure("Invalid coordinator reply")}
         guard let http=response as? HTTPURLResponse,(200..<300).contains(http.statusCode) else {throw failure(result["error"] as? String ?? "Request failed")}
         return result

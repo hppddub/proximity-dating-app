@@ -72,11 +72,11 @@ test('QR cannot be scanned by issuer, outsider, reused, guessed or used after ex
 });
 test('expiry is authoritative before cleanup and cannot be revived',()=>{
   const f=fixture(),id=f.offer();f.ready(id);f.scan(id);f.tick(120000);
-  assert.throws(()=>f.engine.action(f.a.id,id,'confirm'));assert.equal(f.engine.state(f.a.id).offer?.state,'expired');assert.throws(()=>f.engine.profile(f.a.id,id));
+  assert.throws(()=>f.engine.action(f.a.id,id,'confirm'));assert.equal(f.engine.state(f.a.id).offer?.state,'closed');assert.throws(()=>f.engine.profile(f.a.id,id));
 });
 test('pause wins against a pending connection and cancels both views',()=>{
   const f=fixture(),id=f.offer();f.ready(id);f.scan(id);f.engine.action(f.a.id,id,'confirm');f.engine.pause(f.b.id);
-  assert.throws(()=>f.engine.action(f.b.id,id,'confirm'));assert.equal(f.engine.state(f.a.id).offer?.state,'cancelled');assert.throws(()=>f.engine.profile(f.a.id,id));
+  assert.throws(()=>f.engine.action(f.b.id,id,'confirm'));assert.equal(f.engine.state(f.a.id).offer?.state,'closed');assert.throws(()=>f.engine.profile(f.a.id,id));
 });
 test('block revokes connected profile access and suppresses future offers',()=>{
   const f=fixture(),id=f.offer();f.ready(id);f.scan(id);f.engine.action(f.a.id,id,'confirm');f.engine.action(f.b.id,id,'confirm');
@@ -105,7 +105,7 @@ test('paused, expired and synthetic-ineligible sessions cannot produce offers',(
   const h=fixture(),d=h.engine.device(h.a.id);d.eligible=false;h.engine.store.put('device',d.id,d);assert.throws(()=>h.sample());
 });
 test('expired sessions cancel pending offers even before offer TTL',()=>{
-  const f=fixture({sessionMs:40000}),id=f.offer();f.tick(10001);assert.equal(f.engine.state(f.a.id).offer?.state,'cancelled');assert.throws(()=>f.engine.action(f.a.id,id,'ready'));
+  const f=fixture({sessionMs:40000}),id=f.offer();f.tick(10001);assert.equal(f.engine.state(f.a.id).offer?.state,'closed');assert.throws(()=>f.engine.action(f.a.id,id,'ready'));
 });
 test('proof verification and offer/outbox creation roll back together on write failure',()=>{
   const f=fixture();f.sample();f.tick(30000);
@@ -171,4 +171,9 @@ test('resuming an existing session retains deadline and aliases',()=>{
 test('confirmation retry after a lost success response is safe, but a later block still wins',()=>{
  const f=fixture(),id=f.offer();f.ready(id);f.scan(id);f.engine.action(f.a.id,id,'confirm');f.engine.action(f.b.id,id,'confirm');
  const retried=f.engine.action(f.b.id,id,'confirm');assert.ok('state'in retried);assert.equal(retried.state,'connected');f.engine.action(f.a.id,id,'block');assert.throws(()=>f.engine.action(f.b.id,id,'confirm'));
+});
+
+test('participant views conceal the other person declining or blocking behind a generic closed state',()=>{
+ const f=fixture(),id=f.offer();f.engine.action(f.a.id,id,'decline');const view=f.engine.state(f.b.id).offer;assert.equal(view?.state,'closed');assert.ok(!JSON.stringify(view).includes('declined'));
+ f.engine.action(f.a.id,id,'block');assert.equal(f.engine.state(f.b.id).offer?.state,'closed');
 });
