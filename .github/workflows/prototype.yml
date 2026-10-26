@@ -4,10 +4,10 @@ permissions:
   contents: read
 jobs:
   coordinator:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: '24'
           cache: npm
@@ -16,15 +16,16 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
   android:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: '17'
-      - uses: android-actions/setup-android@v3
-      - run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+          java-version: '21'
+      - run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --version
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'platforms;android-35' 'build-tools;35.0.0'
       - run: ./gradlew assembleDebug lintDebug testDebugUnitTest
         working-directory: apps/android
       - uses: actions/upload-artifact@v4
@@ -34,7 +35,7 @@ jobs:
   ios:
     runs-on: macos-15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Check native protocol interoperability
         run: swiftc apps/ios/ProximityLab/EncounterProtocol.swift tools/verify-swift/main.swift -o /tmp/proximity-protocol && /tmp/proximity-protocol
       - name: Build iOS simulator app without signing

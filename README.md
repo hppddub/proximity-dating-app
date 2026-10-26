@@ -1,9 +1,55 @@
-# proximity-dating-app
-idea ive had for a long time
+# Proximity Lab
+
+A working software prototype for the proximity-dating feasibility experiment:
+Android and iOS Bluetooth diagnostic clients, a Node.js coordinator, and a minimal
+browser console for exercising the complete synthetic encounter flow.
+
+Multiple introductions over time; **one active introduction per person**. No real
+profiles, location history, swipe feed, or compatibility model.
+
+## Try the prototype
+
+Requires **Node.js 24+**. From the repository root:
+
+```sh
+npm ci
+npm run demo
+npm run demo:web
+```
+
+Open **http://127.0.0.1:8787**. Create two simulated participants, start samples,
+wait 30 seconds for dwell, opt in with both, exchange the QR challenge, confirm
+with both, then fetch the synthetic profile. Ignore/decline, expiry, pause,
+disconnect, and block are supported. The console labels simulated evidence;
+it does not establish Bluetooth or battery performance.
+
+For native phones, use `npm start` (simulation off), `npm run invite`, and the
+[build/install/device runbook](docs/experiments/runbook.md). Android source is under
+`apps/android`; the checked-in iOS project is `apps/ios/ProximityLab.xcodeproj`.
+Push providers are optional to start the software; unconfigured delivery is shown
+explicitly. Diagnostic local/polling alerts are separate measurement variants.
+
+## Verify
+
+```sh
+npm run check
+npm test
+npm run demo
+npx playwright install chromium
+npm run test:e2e
+```
+
+Android: `cd apps/android && ./gradlew assembleDebug lintDebug testDebugUnitTest`.
+CI also builds iOS on a macOS runner without signing. See
+[implementation evidence and limits](docs/experiments/implementation-status.md)
+for the actual results. Compilation and simulation do not establish locked-phone
+feasibility; that requires the physical trials in the runbook.
 
 ## Project documents
 
 - [Product encounter and feasibility criteria](docs/product/cafe-encounter-and-feasibility.md)
 - [Prototype development and implementation plan](docs/plans/feasibility-prototype-implementation.md)
+- [Build, installation and experiment runbook](docs/experiments/runbook.md)
+- [Implementation evidence and limitations](docs/experiments/implementation-status.md)
 - [Initial research](docs/research/proximity-dating-research.md)
 - [Follow-up research and system options](docs/research/follow-up-competition-and-system-options.md)

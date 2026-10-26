@@ -39,7 +39,8 @@ class DiscoveryService : Service() {
         if ((Lab.session?.optLong("until")?:0) <= Lab.now()) { Lab.log("session_expired"); stopSelf(); return }
         if(diagnosticPolling && !polling && System.currentTimeMillis()-lastPoll>10000) { polling=true; lastPoll=System.currentTimeMillis(); Lab.io.execute {
             try { Lab.refresh(); val o=Lab.offer
-                if(o!=null && o.getString("id")!=lastOffer) { lastOffer=o.getString("id"); notifyOffer(o) }
+                if(o!=null && o.optString("state") in listOf("offered","ready") && o.optLong("expiresAt")>Lab.now() && o.getString("id")!=lastOffer) { lastOffer=o.getString("id"); notifyOffer(o) }
+            if(o==null || o.optString("state") !in listOf("offered","ready"))getSystemService(NotificationManager::class.java).cancel(2)
             } catch(e:Exception) { Lab.log("refresh_failed",e.message?:"error") } finally { polling=false }
         } }
         handler.postDelayed(this,2000)
@@ -75,7 +76,7 @@ class DiscoveryService : Service() {
     private fun notifyOffer(o:JSONObject) {
         val pi=PendingIntent.getActivity(this,0,Intent(this,MainActivity::class.java),PendingIntent.FLAG_IMMUTABLE)
         getSystemService(NotificationManager::class.java).notify(2,Notification.Builder(this,"offers").setSmallIcon(android.R.drawable.ic_dialog_info)
-            .setContentTitle("An introduction may be available").setContentText("Open to check. Diagnostic polling delivery.").setContentIntent(pi).setAutoCancel(true).setTimeoutAfter(120000).build())
+            .setContentTitle("An introduction may be available").setContentText("Open to check. Diagnostic polling delivery.").setContentIntent(pi).setAutoCancel(true).setTimeoutAfter((o.optLong("expiresAt")-Lab.now()).coerceAtLeast(1)).build())
         Lab.log("local_offer_notification_requested","polling transport; not FCM delivery")
     }
     private val advertiser=object:AdvertiseCallback() {
@@ -85,7 +86,7 @@ class DiscoveryService : Service() {
     private val scanner=object:ScanCallback() {
         override fun onScanFailed(errorCode:Int) { Lab.log("scan_failed",errorCode.toString()) }
         override fun onScanResult(type:Int,result:ScanResult) { handler.post {
-            if(client!=null) return@post
+            if(!running || client!=null) return@post
             val key=result.device.address; val now=System.currentTimeMillis()
             if(now-(cooldown[key]?:0)<10000) return@post
             cooldown[key]=now; if(cooldown.size>100) cooldown.keys.firstOrNull()?.let{cooldown.remove(it)}
@@ -146,32 +147,36 @@ class DiscoveryService : Service() {
         if(!g.writeCharacteristic(c)) { Lab.log("write_start_failed"); closeClient() }
     }
     private val clientCallbacks=object:BluetoothGattCallback() {
-        override fun onConnectionStateChange(g:BluetoothGatt,status:Int,newState:Int) {
-            if(status!=BluetoothGatt.GATT_SUCCESS || newState==BluetoothProfile.STATE_DISCONNECTED) { handler.post { if(client===g) closeClient() else g.close() }; return }
-            if(newState==BluetoothProfile.STATE_CONNECTED) { Lab.log("gatt_connected"); g.discoverServices() }
-        }
-        override fun onServicesDiscovered(g:BluetoothGatt,status:Int) {
-            try { require(status==BluetoothGatt.GATT_SUCCESS); localA=Lab.hello(); send(g,helloId,localA!!) }
-            catch(e:Exception) { Lab.log("exchange_failed",e.message?:"error"); closeClient() }
-        }
-        override fun onCharacteristicWrite(g:BluetoothGatt,c:BluetoothGattCharacteristic,status:Int) {
-            if(status!=BluetoothGatt.GATT_SUCCESS) { Lab.log("write_failed",status.toString()); closeClient(); return }
-            if(writeQueue.isNotEmpty()) { writeNext(g); return }
-            if(writing==helloId) { g.readCharacteristic(g.getService(serviceId).getCharacteristic(replyId)) }
-            else { finalProof?.let{Lab.submit(it)}; Lab.log("exchange_complete","central"); closeClient() }
-        }
-        override fun onCharacteristicRead(g:BluetoothGatt,c:BluetoothGattCharacteristic,value:ByteArray,status:Int) {
+        override fun onConnectionStateChange(g:BluetoothGatt,status:Int,newState:Int) { handler.post {
+            if(client!==g){g.close();return@post}
+            if(status!=BluetoothGatt.GATT_SUCCESS || newState==BluetoothProfile.STATE_DISCONNECTED) {closeClient();return@post}
+            if(newState==BluetoothProfile.STATE_CONNECTED) {Lab.log("gatt_connected");g.discoverServices()}
+        } }
+        override fun onServicesDiscovered(g:BluetoothGatt,status:Int) { handler.post {
+            if(client!==g)return@post
+            try {require(status==BluetoothGatt.GATT_SUCCESS);localA=Lab.hello();send(g,helloId,localA!!)}
+            catch(e:Exception){Lab.log("exchange_failed",e.message?:"error");closeClient()}
+        } }
+        override fun onCharacteristicWrite(g:BluetoothGatt,c:BluetoothGattCharacteristic,status:Int) { handler.post {
+            if(client!==g)return@post
+            if(status!=BluetoothGatt.GATT_SUCCESS){Lab.log("write_failed",status.toString());closeClient();return@post}
+            if(writeQueue.isNotEmpty()){writeNext(g);return@post}
+            if(writing==helloId)g.readCharacteristic(g.getService(serviceId).getCharacteristic(replyId))
+            else {finalProof?.let{Lab.submit(it)};Lab.log("exchange_complete","central");closeClient()}
+        } }
+        override fun onCharacteristicRead(g:BluetoothGatt,c:BluetoothGattCharacteristic,value:ByteArray,status:Int) { handler.post {
+            if(client!==g)return@post
             try {
                 require(status==BluetoothGatt.GATT_SUCCESS)
-                val b=JSONObject(String(value)); val a=localA?:error("No hello")
+                val b=JSONObject(String(value));val a=localA?:error("No hello")
                 finalProof=JSONObject().put("a",a).put("b",b).put("sigA",Lab.sign(Lab.transcript(a,b)))
                 send(g,finishId,finalProof!!)
-            } catch(e:Exception) { Lab.log("reply_failed",e.message?:"error"); closeClient() }
-        }
+            } catch(e:Exception){Lab.log("reply_failed",e.message?:"error");closeClient()}
+        } }
     }
     private fun closeClient() { client?.disconnect(); client?.close(); client=null; writeQueue.clear(); localA=null; finalProof=null }
     override fun onDestroy() {
-        handler.removeCallbacksAndMessages(null)
+        running=false;handler.removeCallbacksAndMessages(null)
         try { if(::adapter.isInitialized) { adapter.bluetoothLeScanner?.stopScan(scanner); adapter.bluetoothLeAdvertiser?.stopAdvertising(advertiser) }; closeClient(); server?.close() } catch(_:Exception) {}
         server=null; Lab.locallyPaused=true;Lab.session=null;Lab.offer=null
         if(Lab.credentials.has("token"))Lab.io.execute{try{Lab.request("/v1/pause",JSONObject())}catch(_:Exception){Lab.log("pause_pending","Server unreachable; session/offer expiry still apply")}}

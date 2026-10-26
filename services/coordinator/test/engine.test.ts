@@ -1,4 +1,5 @@
 import { test } from 'node:test';
+import { readFileSync } from 'node:fs';
 import assert from 'node:assert/strict';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -158,4 +159,11 @@ test('loopback console can complete the same gated HTTP flow with clearly simula
     await call(1,`/v1/offers/${id}/scan`,{challenge:qr.challenge});await call(0,`/v1/offers/${id}/confirm`);await call(1,`/v1/offers/${id}/confirm`);
     const profile=await app.inject({url:`/v1/offers/${id}/profile`,headers:headers(0)});assert.equal(profile.statusCode,200);assert.ok(profile.body.includes('Synthetic'));
   }finally{await app.close();}
+});
+
+test('Node signs the published Android and Swift interoperability vector',()=>{
+  const v=JSON.parse(readFileSync(new URL('../../../packages/protocol/golden.json',import.meta.url),'utf8'));assert.equal(sign(v.key,v.transcript),v.signature);
+});
+test('resuming an existing session retains deadline and aliases',()=>{
+  const f=fixture(),before=f.engine.state(f.a.id).session;f.tick(10000);const resumed=f.engine.start(f.a.id).session;assert.deepEqual(resumed,before);
 });
