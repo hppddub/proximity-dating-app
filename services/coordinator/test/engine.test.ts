@@ -170,5 +170,5 @@ test('resuming an existing session retains deadline and aliases',()=>{
 
 test('confirmation retry after a lost success response is safe, but a later block still wins',()=>{
  const f=fixture(),id=f.offer();f.ready(id);f.scan(id);f.engine.action(f.a.id,id,'confirm');f.engine.action(f.b.id,id,'confirm');
- assert.equal(f.engine.action(f.b.id,id,'confirm').state,'connected');f.engine.action(f.a.id,id,'block');assert.throws(()=>f.engine.action(f.b.id,id,'confirm'));
+ const retried=f.engine.action(f.b.id,id,'confirm');assert.ok('state'in retried);assert.equal(retried.state,'connected');f.engine.action(f.a.id,id,'block');assert.throws(()=>f.engine.action(f.b.id,id,'confirm'));
 });
