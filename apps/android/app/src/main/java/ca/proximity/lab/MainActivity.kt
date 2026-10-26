@@ -27,6 +27,8 @@ class MainActivity: Activity() {
     private var refreshing=false
     private val update=object:Runnable { override fun run() {
         status.text="Session: ${Lab.session?.optString("id")?:"paused"}\nOffer: ${Lab.offer?.optString("state")?:"none"} / push ${Lab.offer?.optString("notificationStatus")?:"none"}\n${Lab.offer?.optString("cue")?:""}"
+        if(Lab.offer?.optString("state")!="connected") profile.text=""
+        if(Lab.offer?.optString("state")!="ready") qr.setImageDrawable(null)
         logs.text=Lab.export().lines().takeLast(12).joinToString("\n")
         if(!refreshing && Lab.credentials.has("token") && System.currentTimeMillis()-lastRefresh>5000) {
             lastRefresh=System.currentTimeMillis(); refreshing=true

@@ -44,12 +44,11 @@ final class Lab: ObservableObject {
     func transcript(_ a:[String:Any],_ b:[String:Any]) throws -> String {
         guard let aa=a["alias"] as? String,let ba=b["alias"] as? String,let an=a["nonce"] as? String,let bn=b["nonce"] as? String,
               let at=a["at"] as? NSNumber,let bt=b["at"] as? NSNumber else {throw failure("Invalid peer payload")}
-        return "v1|\(aa)|\(ba)|\(an)|\(bn)|\(at.int64Value)|\(bt.int64Value)"
+        return EncounterProtocol.transcript(aliasA:aa,aliasB:ba,nonceA:an,nonceB:bn,atA:at.int64Value,atB:bt.int64Value)
     }
     func sign(_ text:String)throws->String {
         guard let hex=credentials["proofKey"],hex.count==64 else {throw failure("Enroll first")}
-        let bytes=stride(from:0,to:hex.count,by:2).map{i->UInt8 in let start=hex.index(hex.startIndex,offsetBy:i);return UInt8(hex[start..<hex.index(start,offsetBy:2)],radix:16)!}
-        return HMAC<SHA256>.authenticationCode(for:Data(text.utf8),using:SymmetricKey(data:Data(bytes))).map{String(format:"%02x",$0)}.joined()
+        return try EncounterProtocol.sign(hexKey:hex,text:text)
     }
     func request(_ path:String,_ body:[String:Any]?=nil,auth:Bool=true) async throws->[String:Any] {
         guard let base=credentials["url"], let url=URL(string:base.trimmingCharacters(in:CharacterSet(charactersIn:"/"))+path),

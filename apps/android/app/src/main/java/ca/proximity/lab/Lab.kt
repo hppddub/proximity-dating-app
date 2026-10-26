@@ -50,10 +50,7 @@ object Lab {
     fun now() = System.currentTimeMillis() + clockOffset
     fun nonce(): String = ByteArray(16).apply { SecureRandom().nextBytes(this) }.joinToString("") { "%02x".format(it) }
     fun sign(text: String): String {
-        val hex = credentials.getString("proofKey")
-        val key = hex.chunked(2).map { it.toInt(16).toByte() }.toByteArray()
-        val mac = Mac.getInstance("HmacSHA256"); mac.init(SecretKeySpec(key,"HmacSHA256"))
-        return mac.doFinal(text.toByteArray()).joinToString("") { "%02x".format(it) }
+        return EncounterCrypto.sign(credentials.getString("proofKey"),text)
     }
     fun hello(): JSONObject {
         check(!locallyPaused) { "Discovery is locally paused" }; val s = session ?: error("Start a session first")
@@ -64,7 +61,7 @@ object Lab {
         }
         error("Session expired")
     }
-    fun transcript(a: JSONObject,b: JSONObject) = "v1|${a.getString("alias")}|${b.getString("alias")}|${a.getString("nonce")}|${b.getString("nonce")}|${a.getLong("at")}|${b.getLong("at")}"
+    fun transcript(a: JSONObject,b: JSONObject) = EncounterCrypto.transcript(a.getString("alias"),b.getString("alias"),a.getString("nonce"),b.getString("nonce"),a.getLong("at"),b.getLong("at"))
     fun request(path: String, body: JSONObject? = null, authenticated: Boolean = true): JSONObject {
         val c = credentials; val base = c.optString("url").trimEnd('/')
         require(base.isNotEmpty()) { "Enter coordinator URL" }

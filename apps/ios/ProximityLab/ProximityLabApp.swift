@@ -72,6 +72,7 @@ struct LabView:View {
             ShareLink("Export redacted diagnostics",item:lab.events.joined(separator:"\n"))
             Text(lab.events.suffix(12).joined(separator:"\n")).font(.caption.monospaced())
         }.padding()}
+        .onChange(of:lab.offer?["state"] as? String){state in if state != "connected" {profile=""};if state != "ready" {qr=nil}}
         .sheet(isPresented:$scanning){QRScanner{value in challenge=value;scanning=false}}
         .onChange(of:scenePhase){phase in
             lab.log("app_lifecycle",String(describing:phase))

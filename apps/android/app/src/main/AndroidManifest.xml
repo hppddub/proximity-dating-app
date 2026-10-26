@@ -9,7 +9,7 @@
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.bluetooth_le" android:required="true" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
-    <application android:label="Proximity Lab" android:allowBackup="false" android:networkSecurityConfig="@xml/network_security_config" android:theme="@android:style/Theme.Material.Light.NoActionBar">
+    <application android:label="Proximity Lab" android:icon="@android:drawable/ic_menu_compass" android:dataExtractionRules="@xml/data_extraction_rules" android:allowBackup="false" android:networkSecurityConfig="@xml/network_security_config" android:theme="@android:style/Theme.Material.Light.NoActionBar">
         <activity android:name=".MainActivity" android:exported="true"><intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter></activity>
         <service android:name=".DiscoveryService" android:exported="false" android:foregroundServiceType="connectedDevice" />
         <service android:name=".PushService" android:exported="false"><intent-filter><action android:name="com.google.firebase.MESSAGING_EVENT"/></intent-filter></service>

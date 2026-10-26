@@ -4,8 +4,8 @@ import { fileURLToPath } from 'node:url';
 import QRCode from 'qrcode';
 import { Engine, Problem, type Device } from './engine.ts';
 
-export async function createApp(engine=new Engine(), options:{demo?:boolean}={}) {
-  const app=Fastify({logger:false,bodyLimit:16384,trustProxy:false});
+export async function createApp(engine=new Engine(), options:{demo?:boolean;tls?:{key:string;cert:string}}={}) {
+  const app=Fastify({logger:false,bodyLimit:16384,trustProxy:false,...(options.tls?{https:options.tls}:{})});
   const attempts=new Map<string,{at:number;count:number}>();
   app.addHook('onRequest',async(req,reply)=>{
     reply.header('Cache-Control','no-store').header('X-Content-Type-Options','nosniff').header('Referrer-Policy','no-referrer')

@@ -19,7 +19,7 @@ export const defaults:Config = {dwellMs:30000,freshMs:30000,offerMs:120000,coold
 export class Engine {
   readonly config:Config;
   constructor(public store=new Store(),public now:()=>number=Date.now,config:Partial<Config>={}) {this.config={...defaults,...config};}
-  createInvite():string {const invite=random();this.store.put('invite',hash(invite),{id:hash(invite),until:this.now()+3600000});return invite;}
+  createInvite():string {const invite=random();this.store.put('invite',hash(invite),{id:hash(invite),at:this.now(),until:this.now()+3600000});return invite;}
   enroll(invite:unknown,platform:unknown) {
     requireThat(typeof invite==='string' && ['android','ios','simulator'].includes(String(platform)), 'Invalid enrollment',400);
     return this.store.atomic(()=>{
@@ -176,12 +176,13 @@ export class Engine {
     return this.encounter(a.id,makeProof({alias:aa,proofKey:a.proofKey},{alias:bb,proofKey:b.proofKey},this.now()));
   }
   cleanup() {
-    this.expire();const cutoff=this.now()-this.config.retentionMs;
+    this.expire();const cutoff=this.now()-this.config.retentionMs;let removed=false;
     for(const kind of ['invite','proof','nonce','encounter','pair-session','outbox','offer','block','alias','device']) {
       for(const r of this.store.all<Record<string,unknown>>(kind)) {
-        const when=Number(r.at??r.last??r.created??r.until??0);
-        if(when<cutoff) {this.store.delete(kind,String(r.id??r.alias));if(kind==='device')this.store.db.prepare('DELETE FROM reservations WHERE device=?').run(String(r.id));}
+        const when=Number(r.at??r.last??r.created??r.from??r.until??0);
+        if(when<cutoff) {removed=true;this.store.delete(kind,String(r.id??r.alias));if(kind==='device')this.store.db.prepare('DELETE FROM reservations WHERE device=?').run(String(r.id));}
       }
     }
+    if(removed){this.store.db.exec('PRAGMA wal_checkpoint(TRUNCATE)');this.store.db.exec('VACUUM');}
   }
 }

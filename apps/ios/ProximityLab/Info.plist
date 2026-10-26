@@ -31,6 +31,13 @@
 	<string>Detect enrolled test phones nearby during a voluntary experiment.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Scan the current introduction's connection QR.</string>
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<false/>
+		<key>UISceneConfigurations</key>
+		<dict/>
+	</dict>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>bluetooth-central</string>

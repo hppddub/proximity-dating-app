@@ -7,6 +7,7 @@ android {
     kotlinOptions { jvmTarget = "17" }
 }
 dependencies {
+    testImplementation("junit:junit:4.13.2")
     implementation("com.google.android.gms:play-services-code-scanner:16.1.0")
     implementation("com.google.firebase:firebase-messaging:24.1.1")
 }
