@@ -39,7 +39,7 @@ export class Engine {
   start(id:string) {
     return this.store.atomic(()=>{
       this.expire();const d=this.device(id);
-      requireThat(!d.session || d.session.until<=this.now(),'A session is already active');
+      if(d.session && d.session.until>this.now())return {session:this.publicSession(d.session),now:this.now()};
       for(const e of this.store.all<{id:string}>('encounter'))if(e.id.split(':').includes(id))this.store.delete('encounter',e.id);
       const now=this.now(),end=now+this.config.sessionMs, session:Session={id:random(),until:end,aliases:[]};
       for(let from=Math.floor(now/60000)*60000;from<end;from+=60000) {
@@ -78,7 +78,8 @@ export class Engine {
   }
   private view(o:Offer,id:string) {
     const validCue=o.state==='ready' && o.expiresAt>this.now() && this.pairFresh(o);
-    return {id:o.id,state:o.state,created:o.created,expiresAt:o.expiresAt,ready:o.ready.includes(id),confirmed:o.confirms.includes(id),scanned:o.scanned,simulated:o.simulated,...(validCue?{cue:o.cue}:{} )};
+    const job=this.store.all<Outbox>('outbox').find(j=>j.offer===o.id&&j.device===id);
+    return {notificationStatus:job?.status??'none',id:o.id,state:o.state,created:o.created,expiresAt:o.expiresAt,ready:o.ready.includes(id),confirmed:o.confirms.includes(id),scanned:o.scanned,simulated:o.simulated,...(validCue?{cue:o.cue}:{} )};
   }
   private pairFresh(o:Offer) {
     const e=this.store.get<{last:number}>('encounter',pairKey(o.a,o.b));

@@ -11,6 +11,7 @@ final class BluetoothLab: NSObject, ObservableObject, CBCentralManagerDelegate, 
     var central:CBCentralManager!
     var peripheral:CBPeripheralManager!
     @Published var active=false
+    @Published var role="both"
     var peer:CBPeripheral?
     var chars=[CBUUID:CBCharacteristic]()
     var a:[String:Any]?
@@ -31,7 +32,11 @@ final class BluetoothLab: NSObject, ObservableObject, CBCentralManagerDelegate, 
     }
     func start() {
         guard lab.session != nil else {lab.log("start_failed","Start server session first");return}
-        active=true;configureCentral();configurePeripheral();lab.log("discovery_started","iOS callbacks; no keepalive or background polling")
+        active=true;configureCentral();configurePeripheral()
+        if let until=lab.session?["until"] as? NSNumber { DispatchQueue.main.asyncAfter(deadline:.now()+max(0,Double(until.int64Value-lab.now())/1000)) { [weak self] in
+            guard let self=self,let current=self.lab.session?["until"] as? NSNumber,current.int64Value<=self.lab.now() else{return};self.stop();self.lab.locallyPaused=true;self.lab.session=nil
+        }}
+        lab.log("discovery_started","iOS callbacks; no keepalive or background polling")
     }
     func stop() {
         active=false;central.stopScan();peripheral.stopAdvertising();peripheral.removeAllServices();serverAdded=false
@@ -40,9 +45,9 @@ final class BluetoothLab: NSObject, ObservableObject, CBCentralManagerDelegate, 
     func usable()->Bool {
         guard active,let until=lab.session?["until"] as? NSNumber,until.int64Value>lab.now() else {return false};return true
     }
-    func configureCentral() {if usable() && central.state == .poweredOn {central.scanForPeripherals(withServices:[service],options:[CBCentralManagerScanOptionAllowDuplicatesKey:true])}}
+    func configureCentral() {if role != "peripheral" && usable() && central.state == .poweredOn {central.scanForPeripherals(withServices:[service],options:[CBCentralManagerScanOptionAllowDuplicatesKey:true])}}
     func configurePeripheral() {
-        guard usable(),peripheral.state == .poweredOn,!serverAdded else{return}
+        guard role != "central",usable(),peripheral.state == .poweredOn,!serverAdded else{return}
         serverAdded=true
         let svc=CBMutableService(type:service,primary:true)
         svc.characteristics=[CBMutableCharacteristic(type:helloID,properties:.write,value:nil,permissions:.writeable),CBMutableCharacteristic(type:replyID,properties:.read,value:nil,permissions:.readable),CBMutableCharacteristic(type:finishID,properties:.write,value:nil,permissions:.writeable)]

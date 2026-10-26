@@ -1,5 +1,5 @@
 import Fastify from 'fastify';
-import fastifyStatic from '@fastify/static';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import QRCode from 'qrcode';
 import { Engine, Problem, type Device } from './engine.ts';
@@ -52,6 +52,9 @@ export async function createApp(engine=new Engine(), options:{demo?:boolean}={})
     return {pair,warning:'SIMULATION. No Bluetooth detection, notification display or battery evidence.'};
   });
   app.post<{Body:{a:string;b:string}}>('/demo/sample',async req=>{demo(req.ip);return engine.simulate(req.body.a,req.body.b);});
-  await app.register(fastifyStatic,{root:fileURLToPath(new URL('../public/',import.meta.url)),index:'index.html'});
+  for(const [route,file,type] of [['/','index.html','text/html; charset=utf-8'],['/app.js','app.js','text/javascript; charset=utf-8'],['/style.css','style.css','text/css; charset=utf-8']]) {
+    const content=readFileSync(fileURLToPath(new URL(`../public/${file}`,import.meta.url)));
+    app.get(route,async(_req,reply)=>reply.type(type).send(content));
+  }
   return app;
 }

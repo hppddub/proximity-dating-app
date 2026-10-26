@@ -30,11 +30,14 @@ class DiscoveryService : Service() {
     private var writeQueue=ArrayDeque<ByteArray>()
     private var writing: UUID?=null
     private var lastOffer:String?=null
+    private var running=false
+    private var role="both"
     private var lastPoll=0L
     private var polling=false
+    private var diagnosticPolling=true
     private val tick=object:Runnable { override fun run() {
         if ((Lab.session?.optLong("until")?:0) <= Lab.now()) { Lab.log("session_expired"); stopSelf(); return }
-        if(!polling && System.currentTimeMillis()-lastPoll>10000) { polling=true; lastPoll=System.currentTimeMillis(); Lab.io.execute {
+        if(diagnosticPolling && !polling && System.currentTimeMillis()-lastPoll>10000) { polling=true; lastPoll=System.currentTimeMillis(); Lab.io.execute {
             try { Lab.refresh(); val o=Lab.offer
                 if(o!=null && o.getString("id")!=lastOffer) { lastOffer=o.getString("id"); notifyOffer(o) }
             } catch(e:Exception) { Lab.log("refresh_failed",e.message?:"error") } finally { polling=false }
@@ -45,7 +48,8 @@ class DiscoveryService : Service() {
     override fun onCreate() { super.onCreate(); Lab.context=applicationContext }
     override fun onStartCommand(intent:Intent?, flags:Int, startId:Int):Int {
         if(intent?.action=="STOP") { stopSelf(); return START_NOT_STICKY }
-        if(server!=null) return START_NOT_STICKY
+        if(running) return START_NOT_STICKY
+        running=true;role=intent?.getStringExtra("role")?:"both";diagnosticPolling=intent?.getBooleanExtra("diagnosticPolling",true)?:true
         try {
             val nm=getSystemService(NotificationManager::class.java)
             nm.createNotificationChannel(NotificationChannel("discovery","Discovery experiment",NotificationManager.IMPORTANCE_LOW))
@@ -56,14 +60,14 @@ class DiscoveryService : Service() {
                 .setContentTitle("Proximity Lab: discovery active").setContentText("Foreground-service test variant; tap to inspect").setContentIntent(pi).addAction(Notification.Action.Builder(null,"Stop",stop).build()).build())
             val manager=getSystemService(BluetoothManager::class.java); adapter=manager.adapter
             require(adapter.isEnabled) { "Enable Bluetooth" }
-            server=manager.openGattServer(this,serverCallbacks)
+            if(role!="central") server=manager.openGattServer(this,serverCallbacks)
             val svc=BluetoothGattService(serviceId,BluetoothGattService.SERVICE_TYPE_PRIMARY)
             svc.addCharacteristic(BluetoothGattCharacteristic(helloId,BluetoothGattCharacteristic.PROPERTY_WRITE,BluetoothGattCharacteristic.PERMISSION_WRITE))
             svc.addCharacteristic(BluetoothGattCharacteristic(replyId,BluetoothGattCharacteristic.PROPERTY_READ,BluetoothGattCharacteristic.PERMISSION_READ))
             svc.addCharacteristic(BluetoothGattCharacteristic(finishId,BluetoothGattCharacteristic.PROPERTY_WRITE,BluetoothGattCharacteristic.PERMISSION_WRITE))
-            server!!.addService(svc)
-            adapter.bluetoothLeScanner.startScan(listOf(ScanFilter.Builder().setServiceUuid(ParcelUuid(serviceId)).build()),ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_POWER).build(),scanner)
-            Lab.log("discovery_started","foreground-service; filtered LOW_POWER scan")
+            server?.addService(svc)
+            if(role!="peripheral") adapter.bluetoothLeScanner.startScan(listOf(ScanFilter.Builder().setServiceUuid(ParcelUuid(serviceId)).build()),ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_POWER).build(),scanner)
+            Lab.log("discovery_started","foreground-service; LOW_POWER; role=$role")
             handler.post(tick)
         } catch(e:Exception) { Lab.log("discovery_error",e.message?:"error"); stopSelf() }
         return START_NOT_STICKY
@@ -116,8 +120,8 @@ class DiscoveryService : Service() {
                         require(message.getString("nonce").length==32); val b=Lab.hello(); b.put("sig",Lab.sign(Lab.transcript(message,b)))
                         hellos[k]=message; replies[k]=b; Lab.log("hello_received")
                     } else if(c.uuid==finishId) {
-                        require(message.getJSONObject("a").toString()==hellos[k]?.toString())
-                        require(message.getJSONObject("b").toString()==replies[k]?.toString())
+                        require(Lab.transcript(message.getJSONObject("a"),message.getJSONObject("b"))==Lab.transcript(hellos[k]?:error("No hello"),replies[k]?:error("No reply")))
+                        require(message.getJSONObject("b").getString("sig")==replies[k]?.getString("sig"))
                         Lab.log("exchange_complete","peripheral"); Lab.submit(message)
                     } else error("Unknown characteristic")
                 }
@@ -169,6 +173,8 @@ class DiscoveryService : Service() {
     override fun onDestroy() {
         handler.removeCallbacksAndMessages(null)
         try { if(::adapter.isInitialized) { adapter.bluetoothLeScanner?.stopScan(scanner); adapter.bluetoothLeAdvertiser?.stopAdvertising(advertiser) }; closeClient(); server?.close() } catch(_:Exception) {}
-        server=null; Lab.log("discovery_stopped"); stopForeground(STOP_FOREGROUND_REMOVE); super.onDestroy()
+        server=null; Lab.locallyPaused=true;Lab.session=null;Lab.offer=null
+        if(Lab.credentials.has("token"))Lab.io.execute{try{Lab.request("/v1/pause",JSONObject())}catch(_:Exception){Lab.log("pause_pending","Server unreachable; session/offer expiry still apply")}}
+        Lab.log("discovery_stopped"); stopForeground(STOP_FOREGROUND_REMOVE); super.onDestroy()
     }
 }

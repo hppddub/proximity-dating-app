@@ -22,6 +22,7 @@ object Lab {
     val io = Executors.newSingleThreadExecutor()
     private val lock = Any()
     private val events = ArrayDeque<String>()
+    @Volatile var locallyPaused=true
     @Volatile var session: JSONObject? = null
     @Volatile var offer: JSONObject? = null
     @Volatile var clockOffset: Long = 0
@@ -55,7 +56,7 @@ object Lab {
         return mac.doFinal(text.toByteArray()).joinToString("") { "%02x".format(it) }
     }
     fun hello(): JSONObject {
-        val s = session ?: error("Start a session first")
+        check(!locallyPaused) { "Discovery is locally paused" }; val s = session ?: error("Start a session first")
         val aliases = s.getJSONArray("aliases"); val now = now()
         for (i in 0 until aliases.length()) {
             val a = aliases.getJSONObject(i)
@@ -83,7 +84,8 @@ object Lab {
     }
     fun refresh() {
         val result=request("/v1/state"); clockOffset=result.getLong("now")-System.currentTimeMillis()
-        session=result.optJSONObject("session"); offer=result.optJSONObject("offer")
+        session=if(locallyPaused) null else result.optJSONObject("session"); offer=result.optJSONObject("offer")
+        if(locallyPaused && offer?.optString("state")!="connected") offer=null
     }
     fun submit(proof: JSONObject) { io.execute { try { val r=request("/v1/encounters",proof); log("proof_accepted",r.optString("status")); refresh() } catch(e:Exception) { log("proof_failed",e.message?:"error") } } }
     fun log(event: String, detail: String = "") = synchronized(lock) {

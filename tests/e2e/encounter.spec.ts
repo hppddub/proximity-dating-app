@@ -1,0 +1,28 @@
+import { test, expect } from '@playwright/test';
+test('browser console completes mutual readiness, QR, gated reveal and block',async({page})=>{
+  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.goto('/');await expect(page.locator('#mode')).toContainText('SIMULATION MODE');
+  await page.getByRole('button',{name:'Create two simulated participants'}).click();
+  const a=page.locator('section').nth(0),b=page.locator('section').nth(1);
+  await expect(a).toContainText('Simulated participant 1');
+  await page.getByRole('button',{name:'Start simulated encounter samples'}).click();
+  await expect(a.locator('pre').first()).toContainText('offered',{timeout:40000});
+  await a.getByRole('button',{name:'Fetch authorized profile'}).click();await expect(page.locator('#result')).toHaveText('Profile is hidden');
+  await a.getByRole('button',{name:"I'm open to saying hello"}).click();
+  await expect(a.locator('pre').first()).not.toContainText('cue');
+  await b.getByRole('button',{name:"I'm open to saying hello"}).click();
+  await expect(a.locator('pre').first()).toContainText('cue');
+  await a.getByRole('button',{name:'Show QR',exact:true}).click();
+  await expect(a.getByRole('img')).toBeVisible();
+  await expect(b.getByRole('textbox')).not.toBeEmpty();
+  await b.getByRole('button',{name:'Use scanned challenge'}).click();
+  await a.getByRole('button',{name:'Connect and share synthetic profile'}).click();
+  await a.getByRole('button',{name:'Fetch authorized profile'}).click();await expect(page.locator('#result')).toHaveText('Profile is hidden');
+  await b.getByRole('button',{name:'Connect and share synthetic profile'}).click();
+  await expect(a.locator('pre').first()).toContainText('connected');
+  await a.getByRole('button',{name:'Fetch authorized profile'}).click();await expect(a).toContainText('Synthetic café participant');
+  await a.getByRole('button',{name:'Block pair',exact:true}).click();await expect(a.locator('pre').first()).toContainText('blocked');
+  await b.getByRole('button',{name:'Fetch authorized profile'}).click();await expect(page.locator('#result')).toHaveText('Profile is hidden');
+  expect(errors).toEqual([]);
+  await page.screenshot({path:'artifacts/prototype-console.png',fullPage:true});
+});

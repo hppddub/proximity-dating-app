@@ -42,11 +42,13 @@ struct LabView:View {
                 let allowed=try await UNUserNotificationCenter.current().requestAuthorization(options:[.alert,.sound,.badge])
                 lab.log("notification_permission",String(allowed));UIApplication.shared.registerForRemoteNotifications()
             }}
+            Toggle("Diagnostic local alerts (disable for APNs trials)",isOn:$lab.diagnosticAlerts)
+            Picker("Radio role",selection:$bluetooth.role){Text("Both").tag("both");Text("Scanner").tag("central");Text("Advertiser").tag("peripheral")}
             Button("Start 30-minute session + discovery") {run {
-                let r=try await lab.request("/v1/session",[:]);lab.session=r["session"] as? [String:Any]
+                let r=try await lab.request("/v1/session",[:]);lab.locallyPaused=false;lab.session=r["session"] as? [String:Any]
                 if let now=r["now"] as? Double {lab.clockOffset=now-Date().timeIntervalSince1970*1000};bluetooth.start()
             }}
-            Button("Pause and cancel offer") {bluetooth.stop();profile="";qr=nil;lab.session=nil;lab.offer=nil;run{_ = try await lab.request("/v1/pause",[:]);try await lab.refresh()}}
+            Button("Pause and cancel offer") {bluetooth.stop();lab.locallyPaused=true;profile="";qr=nil;lab.session=nil;lab.offer=nil;run{_ = try await lab.request("/v1/pause",[:]);try await lab.refresh()}}
             Button("Refresh server state") {run {try await lab.refresh();if lab.offer?["state"] as? String == "connected",let id=lab.offer?["id"] as? String {let r=try await lab.request("/v1/offers/\(id)/profile");profile=String(data:try JSONSerialization.data(withJSONObject:r,options:.prettyPrinted),encoding:.utf8) ?? ""}}}
             Text(lab.message)
             Text("Session: \(lab.session?["id"] as? String ?? "paused")\nOffer: \(lab.offer?["state"] as? String ?? "none")")
@@ -73,7 +75,7 @@ struct LabView:View {
         .sheet(isPresented:$scanning){QRScanner{value in challenge=value;scanning=false}}
         .onChange(of:scenePhase){phase in
             lab.log("app_lifecycle",String(describing:phase))
-            if phase == .active && lab.credentials["token"] != nil {run{try await lab.refresh()}}
+            if phase == .active && lab.credentials["token"] != nil {run{try await lab.refresh();if lab.session == nil {bluetooth.stop()}}}
             if phase == .background {lab.log("background_limit","No periodic wakeup assumed")}
         }
     }

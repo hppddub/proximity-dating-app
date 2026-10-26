@@ -26,7 +26,7 @@ class MainActivity: Activity() {
     private var lastRefresh=0L
     private var refreshing=false
     private val update=object:Runnable { override fun run() {
-        status.text="Session: ${Lab.session?.optString("id")?:"paused"}\nOffer: ${Lab.offer?.optString("state")?:"none"}\n${Lab.offer?.optString("cue")?:""}"
+        status.text="Session: ${Lab.session?.optString("id")?:"paused"}\nOffer: ${Lab.offer?.optString("state")?:"none"} / push ${Lab.offer?.optString("notificationStatus")?:"none"}\n${Lab.offer?.optString("cue")?:""}"
         logs.text=Lab.export().lines().takeLast(12).joinToString("\n")
         if(!refreshing && Lab.credentials.has("token") && System.currentTimeMillis()-lastRefresh>5000) {
             lastRefresh=System.currentTimeMillis(); refreshing=true
@@ -49,14 +49,16 @@ class MainActivity: Activity() {
             val r=Lab.request("/v1/enroll",JSONObject().put("invite",invite.text.toString()).put("platform","android"),false)
             Lab.credentials=r.put("url",url.text.toString()); configurePush(); Lab.log("enrolled")
         } }
+        val pollingAlerts=Switch(this).apply{text="Diagnostic polling alerts (disable for FCM trials)";isChecked=true};column.addView(pollingAlerts)
+        val role=Spinner(this).apply{adapter=ArrayAdapter(this@MainActivity,android.R.layout.simple_spinner_dropdown_item,listOf("both","central","peripheral"))};column.addView(role)
         button("Start 30-minute session + discovery") { perform {
             require(checkSelfPermission(Manifest.permission.BLUETOOTH_SCAN)==PackageManager.PERMISSION_GRANTED){"Grant Bluetooth permissions first"}
-            val r=Lab.request("/v1/session",JSONObject()); Lab.session=r.getJSONObject("session"); Lab.clockOffset=r.getLong("now")-System.currentTimeMillis()
-            runOnUiThread{startForegroundService(Intent(this,DiscoveryService::class.java))}
+            val r=Lab.request("/v1/session",JSONObject()); Lab.locallyPaused=false; Lab.session=r.getJSONObject("session"); Lab.clockOffset=r.getLong("now")-System.currentTimeMillis()
+            runOnUiThread{startForegroundService(Intent(this,DiscoveryService::class.java).putExtra("role",role.selectedItem.toString()).putExtra("diagnosticPolling",pollingAlerts.isChecked))}
         } }
         button("Pause and cancel current offer") {
             stopService(Intent(this,DiscoveryService::class.java))
-            Lab.session=null; Lab.offer=null; profile.text=""; qr.setImageDrawable(null)
+            Lab.locallyPaused=true; Lab.session=null; Lab.offer=null; profile.text=""; qr.setImageDrawable(null)
             perform{Lab.request("/v1/pause",JSONObject());Lab.refresh()}
         }
         button("Refresh server state") { perform{Lab.refresh(); val o=Lab.offer; if(o?.optString("state")=="connected") {

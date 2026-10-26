@@ -12,6 +12,9 @@ final class Lab: ObservableObject {
     @Published var events = [String]()
     @Published var message = "Ready. Enroll, then start a session."
     var clockOffset: Double = 0
+    var locallyPaused = true
+    @Published var diagnosticAlerts=true
+    var lastDiagnosticOffer:String?
     init() {
         var query: [String:Any] = [kSecClass as String:kSecClassGenericPassword, kSecAttrService as String:"ca.proximity.lab",kSecAttrAccount as String:"installation",kSecReturnData as String:true]
         query[kSecMatchLimit as String] = kSecMatchLimitOne
@@ -34,7 +37,7 @@ final class Lab: ObservableObject {
         precondition(result==errSecSuccess); return bytes.map{String(format:"%02x",$0)}.joined()
     }
     func hello() throws -> [String:Any] {
-        guard let aliases=session?["aliases"] as? [[String:Any]],
+        guard !locallyPaused, let aliases=session?["aliases"] as? [[String:Any]],
               let alias=aliases.first(where:{ (($0["from"] as? NSNumber)?.int64Value ?? Int64.max) <= now() && now() < (($0["until"] as? NSNumber)?.int64Value ?? 0) })?["alias"] as? String else { throw failure("No current session alias") }
         return ["alias":alias,"nonce":nonce(),"at":now()]
     }
@@ -61,7 +64,8 @@ final class Lab: ObservableObject {
         return result
     }
     @MainActor func refresh() async throws {
-        let r=try await request("/v1/state");session=r["session"] as? [String:Any];offer=r["offer"] as? [String:Any]
+        let r=try await request("/v1/state");session=locallyPaused ? nil : r["session"] as? [String:Any];offer=r["offer"] as? [String:Any]
+        if locallyPaused && offer?["state"] as? String != "connected" {offer=nil}
         if let n=r["now"] as? Double {clockOffset=n-Date().timeIntervalSince1970*1000}
     }
     func log(_ event:String,_ detail:String="") {
@@ -72,8 +76,17 @@ final class Lab: ObservableObject {
     }
     func submit(_ proof:[String:Any]) {
         Task { @MainActor in
-            do {let r=try await request("/v1/encounters",proof);log("proof_accepted",r["status"] as? String ?? "");try await refresh()}
+            do {let r=try await request("/v1/encounters",proof);log("proof_accepted",r["status"] as? String ?? "");try await refresh();notifyDiagnosticOffer()}
             catch {log("proof_failed",error.localizedDescription)}
+        }
+    }
+    @MainActor func notifyDiagnosticOffer() {
+        guard diagnosticAlerts,let o=offer,let id=o["id"] as? String,id != lastDiagnosticOffer,
+              ["offered","ready"].contains(o["state"] as? String ?? ""),let expiry=o["expiresAt"] as? NSNumber,expiry.int64Value>now() else{return}
+        lastDiagnosticOffer=id
+        let content=UNMutableNotificationContent();content.title="An introduction may be available";content.body="Diagnostic BLE-callback alert. Open to check.";content.sound = .default
+        UNUserNotificationCenter.current().add(UNNotificationRequest(identifier:"diagnostic-introduction",content:content,trigger:nil)){error in
+            self.log(error == nil ? "local_notification_requested":"local_notification_failed", "BLE callback variant; not APNs delivery")
         }
     }
     @MainActor func registerPush(_ token:String) async {
