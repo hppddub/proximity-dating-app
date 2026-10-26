@@ -39,7 +39,7 @@ export function summarize(records:RecordLine[]) {
     const observed=positives.map(latency).filter((n):n is number=>n!==undefined).sort((a,b)=>a-b);
     const n=positives.length,within60=positives.filter(t=>success(t,60000)).length,within120=positives.filter(t=>success(t,120000)).length;
     return {group,n,within60,within120,missed:positives.filter(t=>latency(t)===undefined).length,controls:controls.length,wrongOffers:controls.filter(t=>t.offerCreated).length,
-      medianObservedMs:observed.length?observed[Math.floor(observed.length/2)]:null,
+      medianObservedMs:observed.length?(observed[Math.floor((observed.length-1)/2)]+observed[Math.floor(observed.length/2)])/2:null,
       p95ObservedMs:observed.length>=20?observed[Math.ceil(observed.length*.95)-1]:null,
       timingGate:n>=30?(within60/n>=.9&&within120/n>=.95?'preliminary pass':'fail'):'insufficient sample',
       controlGate:controls.length>=30?(controls.filter(t=>t.offerCreated).length/controls.length<=.05?'preliminary pass':'fail'):'insufficient sample'};

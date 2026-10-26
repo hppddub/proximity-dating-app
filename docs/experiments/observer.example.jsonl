@@ -1,0 +1,3 @@
+{"kind":"trial","trial":"t01","pairing":"mixed","devicePair":"s26_iphone1","state":"locked5_local","entryAt":1000,"departureAt":181000,"displayAAt":41000,"displayBAt":51000,"simulated":true}
+{"kind":"trial","trial":"n01","pairing":"mixed","devicePair":"s26_iphone1","state":"locked5_local","entryAt":1000,"departureAt":181000,"negative":true,"offerCreated":false,"simulated":true}
+{"kind":"battery","device":"s26","condition":"idle","startPercent":90,"endPercent":88,"durationHours":8,"simulated":true}

@@ -110,6 +110,9 @@ class DiscoveryService : Service() {
             var status=BluetoothGatt.GATT_SUCCESS
             try { synchronized(frames) {
                 require(!preparedWrite && offset==0 && value.size>=2)
+                val expired=frameStarted.filterValues{System.currentTimeMillis()-it>30000}.keys.toList()
+                expired.forEach{frames.remove(it);seqs.remove(it);frameStarted.remove(it)}
+                replies.filterValues{Lab.now()-it.optLong("at")>30000}.keys.toList().forEach{replies.remove(it);hellos.remove(it)}
                 val k=device.address; val seq=value[0].toInt() and 255
                 if(seq==0) { require(frames.size<8 || frames.containsKey(k)); frames[k]=ByteArrayOutputStream(); seqs[k]=0; frameStarted[k]=System.currentTimeMillis() }
                 require(System.currentTimeMillis()-(frameStarted[k]?:0)<30000)
@@ -118,7 +121,7 @@ class DiscoveryService : Service() {
                 if(value[1].toInt()==1) {
                     val message=JSONObject(out.toString("UTF-8")); frames.remove(k); seqs.remove(k); frameStarted.remove(k)
                     if(c.uuid==helloId) {
-                        require(message.getString("nonce").length==32); val b=Lab.hello(); b.put("sig",Lab.sign(Lab.transcript(message,b)))
+                        require(message.getString("nonce").length==32);require(replies.size<8||replies.containsKey(k));val b=Lab.hello(); b.put("sig",Lab.sign(Lab.transcript(message,b)))
                         hellos[k]=message; replies[k]=b; Lab.log("hello_received")
                     } else if(c.uuid==finishId) {
                         require(Lab.transcript(message.getJSONObject("a"),message.getJSONObject("b"))==Lab.transcript(hellos[k]?:error("No hello"),replies[k]?:error("No reply")))
@@ -164,6 +167,9 @@ class DiscoveryService : Service() {
             if(writing==helloId)g.readCharacteristic(g.getService(serviceId).getCharacteristic(replyId))
             else {finalProof?.let{Lab.submit(it)};Lab.log("exchange_complete","central");closeClient()}
         } }
+        override fun onCharacteristicRead(g:BluetoothGatt,c:BluetoothGattCharacteristic,status:Int) {
+            onCharacteristicRead(g,c,c.value?:byteArrayOf(),status)
+        }
         override fun onCharacteristicRead(g:BluetoothGatt,c:BluetoothGattCharacteristic,value:ByteArray,status:Int) { handler.post {
             if(client!==g)return@post
             try {
@@ -178,7 +184,7 @@ class DiscoveryService : Service() {
     override fun onDestroy() {
         running=false;handler.removeCallbacksAndMessages(null)
         try { if(::adapter.isInitialized) { adapter.bluetoothLeScanner?.stopScan(scanner); adapter.bluetoothLeAdvertiser?.stopAdvertising(advertiser) }; closeClient(); server?.close() } catch(_:Exception) {}
-        server=null; Lab.locallyPaused=true;Lab.session=null;Lab.offer=null
+        server=null;synchronized(frames){frames.clear();seqs.clear();frameStarted.clear();hellos.clear();replies.clear()}; Lab.locallyPaused=true;Lab.session=null;Lab.offer=null
         if(Lab.credentials.has("token"))Lab.io.execute{try{Lab.request("/v1/pause",JSONObject())}catch(_:Exception){Lab.log("pause_pending","Server unreachable; session/offer expiry still apply")}}
         Lab.log("discovery_stopped"); stopForeground(STOP_FOREGROUND_REMOVE); super.onDestroy()
     }

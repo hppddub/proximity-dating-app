@@ -11,8 +11,9 @@ export async function createApp(engine=new Engine(), options:{demo?:boolean;tls?
     reply.header('Cache-Control','no-store').header('X-Content-Type-Options','nosniff').header('Referrer-Policy','no-referrer')
       .header('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");
     const origin=req.headers.origin;
-    if(origin && new URL(origin).host!==req.headers.host)throw new Problem(403,'Cross-origin request rejected');
+    if(origin){try{if(new URL(origin).host!==req.headers.host)throw Error();}catch{throw new Problem(403,'Cross-origin request rejected');}}
     const now=engine.now();if(attempts.size>1000)for(const [k,v] of attempts)if(now-v.at>60000)attempts.delete(k);
+    if(!attempts.has(req.ip)&&attempts.size>=1000)throw new Problem(429,'Server busy; retry later');
     const state=attempts.get(req.ip);const count=!state||now-state.at>60000?{at:now,count:1}:{...state,count:state.count+1};attempts.set(req.ip,count);
     if(count.count>300)throw new Problem(429,'Too many requests; retry in a minute');
   });

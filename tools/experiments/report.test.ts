@@ -4,7 +4,7 @@ import {parseRecords,summarize,type Trial,type Battery} from './report.ts';
 const trial=(trial:string,extra:Partial<Trial>={}):Trial=>({kind:'trial',trial,pairing:'mixed',devicePair:'samsung_iphone',state:'locked5',entryAt:1000,departureAt:181000,...extra});
 test('missed and late notifications remain in timing denominator',()=>{
  const r=summarize([trial('a',{displayAAt:31000,displayBAt:41000}),trial('b',{displayAAt:41000}),trial('c',{displayAAt:61000,displayBAt:131000})]).results[0];
- assert.equal(r.n,3);assert.equal(r.within60,1);assert.equal(r.within120,1);assert.equal(r.missed,1);assert.equal(r.timingGate,'insufficient sample');assert.equal(r.p95ObservedMs,null);
+ assert.equal(r.medianObservedMs,85000);assert.equal(r.n,3);assert.equal(r.within60,1);assert.equal(r.within120,1);assert.equal(r.missed,1);assert.equal(r.timingGate,'insufficient sample');assert.equal(r.p95ObservedMs,null);
 });
 test('simulations are excluded rather than counted as physical evidence',()=>{const r=summarize([trial('demo',{simulated:true,displayAAt:2000,displayBAt:2000})]);assert.equal(r.excludedSimulations,1);assert.equal(r.results.length,0);});
 test('invalid intervals, duplicate trial IDs and sensitive observer fields are rejected',()=>{

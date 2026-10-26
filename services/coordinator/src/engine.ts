@@ -137,6 +137,7 @@ export class Engine {
     this.expire();
     return this.store.atomic(()=>{
       const o=this.authorize(id,offerId);
+      if((action==='confirm'&&o.state==='connected')||(action==='decline'&&o.state==='declined')||(action==='disconnect'&&o.state==='disconnected'))return this.view(o,id);
       if(action==='block') {this.store.put('block',pairKey(o.a,o.b),{id:pairKey(o.a,o.b),at:this.now()});this.finish(o,'blocked');return this.view(o,id);}
       if(action==='disconnect') {requireThat(o.state==='connected','Not connected');this.finish(o,'disconnected');return this.view(o,id);}
       this.current(o);

@@ -167,3 +167,8 @@ test('Node signs the published Android and Swift interoperability vector',()=>{
 test('resuming an existing session retains deadline and aliases',()=>{
   const f=fixture(),before=f.engine.state(f.a.id).session;f.tick(10000);const resumed=f.engine.start(f.a.id).session;assert.deepEqual(resumed,before);
 });
+
+test('confirmation retry after a lost success response is safe, but a later block still wins',()=>{
+ const f=fixture(),id=f.offer();f.ready(id);f.scan(id);f.engine.action(f.a.id,id,'confirm');f.engine.action(f.b.id,id,'confirm');
+ assert.equal(f.engine.action(f.b.id,id,'confirm').state,'connected');f.engine.action(f.a.id,id,'block');assert.throws(()=>f.engine.action(f.b.id,id,'confirm'));
+});

@@ -40,7 +40,7 @@ final class BluetoothLab: NSObject, ObservableObject, CBCentralManagerDelegate, 
     }
     func stop() {
         active=false;central.stopScan();peripheral.stopAdvertising();peripheral.removeAllServices();serverAdded=false
-        closePeer();lab.log("discovery_stopped")
+        closePeer();frames.removeAll();sequences.removeAll();started.removeAll();hellos.removeAll();replies.removeAll();lab.log("discovery_stopped")
     }
     func usable()->Bool {
         guard active,let until=lab.session?["until"] as? NSNumber,until.int64Value>lab.now() else {return false};return true
@@ -133,7 +133,12 @@ final class BluetoothLab: NSObject, ObservableObject, CBCentralManagerDelegate, 
             proof=result;try send(finishID,result)
         } catch {lab.log("reply_failed",error.localizedDescription);closePeer()}
     }
+    func purgeServerExchanges() {
+        for id in Array(started.keys) {if let began=started[id],Date().timeIntervalSince(began)>30 {frames.removeValue(forKey:id);sequences.removeValue(forKey:id);started.removeValue(forKey:id)}}
+        for id in Array(replies.keys) {if let at=replies[id]?["at"] as? NSNumber,lab.now()-at.int64Value>30000 {replies.removeValue(forKey:id);hellos.removeValue(forKey:id)}}
+    }
     func peripheralManager(_ peripheral:CBPeripheralManager,didReceiveWrite requests:[CBATTRequest]) {
+        purgeServerExchanges()
         guard usable() else {if let first=requests.first {peripheral.respond(to:first,withResult:.insufficientAuthorization)};return}
         do {
             for request in requests {
@@ -147,6 +152,7 @@ final class BluetoothLab: NSObject, ObservableObject, CBCentralManagerDelegate, 
                     frames.removeValue(forKey:id);sequences.removeValue(forKey:id);started.removeValue(forKey:id)
                     guard let object=try JSONSerialization.jsonObject(with:data) as? [String:Any] else{throw lab.failure("Invalid JSON")}
                     if request.characteristic.uuid==helloID {
+                        guard replies.count<8 || replies[id] != nil else{throw lab.failure("Too many exchanges")}
                         var b=try lab.hello();b["sig"]=try lab.sign(lab.transcript(object,b));hellos[id]=object;replies[id]=b;lab.log("hello_received")
                     } else if request.characteristic.uuid==finishID {
                         guard let a=object["a"] as? NSDictionary,let b=object["b"] as? NSDictionary,
@@ -159,6 +165,7 @@ final class BluetoothLab: NSObject, ObservableObject, CBCentralManagerDelegate, 
         } catch {lab.log("write_rejected",error.localizedDescription);if let first=requests.first {peripheral.respond(to:first,withResult:.invalidAttributeValueLength)}}
     }
     func peripheralManager(_ peripheral:CBPeripheralManager,didReceiveRead request:CBATTRequest) {
+        purgeServerExchanges()
         guard usable(),request.characteristic.uuid==replyID,let reply=replies[request.central.identifier],let data=try? JSONSerialization.data(withJSONObject:reply,options:.sortedKeys),request.offset<=data.count else{peripheral.respond(to:request,withResult:.invalidOffset);return}
         request.value=data.subdata(in:request.offset..<data.count);peripheral.respond(to:request,withResult:.success)
     }
