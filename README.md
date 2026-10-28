@@ -11,6 +11,18 @@ profiles, location history, swipe feed, or compatibility model.
 
 Requires **Node.js 24+**. From the repository root:
 
+For a first checkout in Windows PowerShell (Git required):
+
+```powershell
+Set-Location $env:USERPROFILE
+git clone --branch prototype/feasibility https://github.com/hppddub/proximity-dating-app.git
+Set-Location proximity-dating-app
+node --version
+```
+
+The following commands work in PowerShell, Command Prompt, and Unix shells. Run
+them from the folder containing `package.json` and `package-lock.json`:
+
 ```sh
 npm ci
 npm run demo

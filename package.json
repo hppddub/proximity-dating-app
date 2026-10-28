@@ -15,7 +15,7 @@
     "report": "tsx tools/experiments/report.ts",
     "invite": "tsx tools/invite.ts",
     "test:e2e": "playwright test",
-    "demo:web": "DEMO_MODE=true DB_PATH=data/demo.sqlite tsx services/coordinator/src/main.ts"
+    "demo:web": "tsx tools/demo-web.ts"
   },
   "dependencies": {
     "fastify": "^5.6.2",

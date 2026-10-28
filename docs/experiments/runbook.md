@@ -9,6 +9,19 @@ occur over time, with one active offer per installation.
 
 Install Node.js 24 or later. From the repository root:
 
+The browser demo also works on Windows. For a fresh PowerShell checkout, run:
+
+```powershell
+Set-Location $env:USERPROFILE
+git clone --branch prototype/feasibility https://github.com/hppddub/proximity-dating-app.git
+Set-Location proximity-dating-app
+```
+
+Run npm commands in that project folder, where `package.json` and
+`package-lock.json` exist. `C:\Windows\System32` is not the project folder. If you
+already cloned the project, enter that existing checkout, switch to
+`prototype/feasibility`, and pull the latest changes instead of cloning again.
+
 ```sh
 npm ci
 npm run check
