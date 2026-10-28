@@ -41,6 +41,12 @@ For native phones, use `npm start` (simulation off), `npm run invite`, and the
 Push providers are optional to start the software; unconfigured delivery is shown
 explicitly. Diagnostic local/polling alerts are separate measurement variants.
 
+With a Windows PC, Samsung, and iPhone, start with the
+[first Bluetooth radio check](docs/experiments/first-phone-check-windows.md).
+`npm run phone:test` starts a USB-connected Samsung test coordinator and prints an
+enrollment invite; the iPhone can observe advertisements with nRF Connect before
+the full iOS app is installed using a Mac.
+
 ## Verify
 
 ```sh
