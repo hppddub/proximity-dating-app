@@ -31,6 +31,8 @@
 	<string>Detect enrolled test phones nearby during a voluntary experiment.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Scan the current introduction's connection QR.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Connect to your test coordinator on the same Wi-Fi during proximity experiments.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

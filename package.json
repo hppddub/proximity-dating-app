@@ -16,7 +16,8 @@
     "invite": "tsx tools/invite.ts",
     "test:e2e": "playwright test",
     "demo:web": "tsx tools/demo-web.ts",
-    "phone:test": "tsx tools/phone-test.ts"
+    "phone:test": "tsx tools/phone-test.ts",
+    "phone:mac": "tsx tools/mac-phone-test.ts"
   },
   "dependencies": {
     "fastify": "^5.6.2",

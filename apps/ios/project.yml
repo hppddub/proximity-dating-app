@@ -23,6 +23,7 @@ targets:
         UILaunchScreen: {}
         NSBluetoothAlwaysUsageDescription: Detect enrolled test phones nearby during a voluntary experiment.
         NSCameraUsageDescription: Scan the current introduction's connection QR.
+        NSLocalNetworkUsageDescription: Connect to your test coordinator on the same Wi-Fi during proximity experiments.
         UIBackgroundModes: [bluetooth-central, bluetooth-peripheral]
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true

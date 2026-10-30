@@ -41,6 +41,13 @@ jobs:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - name: Check Mac phone-test certificate setup without installing trust
+        run: npm run phone:mac -- --smoke
       - name: Check native protocol interoperability
         run: swiftc apps/ios/ProximityLab/EncounterProtocol.swift tools/verify-swift/main.swift -o /tmp/proximity-protocol && /tmp/proximity-protocol
       - name: Build iOS simulator app without signing
