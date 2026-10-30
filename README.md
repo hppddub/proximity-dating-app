@@ -47,6 +47,10 @@ With a Windows PC, Samsung, and iPhone, start with the
 enrollment invite; the iPhone can observe advertisements with nRF Connect before
 the full iOS app is installed using a Mac.
 
+For the next stage, follow the [Mac setup from scratch](docs/experiments/mac-two-phone-setup.md).
+`npm run phone:mac` prepares the shared HTTPS coordinator, public certificate and
+two enrollment invites for the native Samsung–iPhone test.
+
 ## Verify
 
 ```sh
