@@ -8,8 +8,10 @@ use, same-space accuracy, and live APNs/FCM delivery remain unmeasured.**
 
 Update October 30: the owner's first phone test shows our Samsung advertisement
 visible in nRF Connect on an iPhone. See [physical radio observations](first-radio-observations.md)
-for the screenshots/log assessment and next experiment. Lock-state timing and a
-full authenticated phone-to-phone exchange remain unverified. Software build/check
+for the screenshots/log assessment and next experiment. The owner reports fresh
+observations with the Samsung locked for more than five minutes; the iPhone was
+using the foreground scanner. A timed lock-state trace, both-phones-locked result
+and full authenticated phone-to-phone exchange remain unverified. Software build/check
 results below refer to the original validated implementation checkpoint.
 
 ## Implemented

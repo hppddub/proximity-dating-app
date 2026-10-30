@@ -16,8 +16,11 @@ de-identified evidence summary, not a completed feasibility study.
   Git; do not commit images/logs containing device identifiers or credentials.
 - The owner reports discovery in less than a few seconds and fresh observations.
   There is no synchronized entry-time record, repeated-trial denominator or exact
-  lock-state annotation. Samsung locked duration and USB connectivity changes
-  have been requested for clarification.
+  lock-state annotation. In a subsequent clarification, the owner reports testing
+  both unlocked and locked, with the Samsung locked for more than five minutes
+  while fresh observations continued. This is owner-reported duration, not an
+  instrumented lock timeline. The owner reports not unplugging the USB cable near
+  the end; no specific server-stop event or other cause was identified.
 
 ## Findings
 
@@ -25,9 +28,9 @@ de-identified evidence summary, not a completed feasibility study.
 | --- | --- |
 | Our service was visible on a real iPhone | All four screenshots display `7B9E1000-29C4-4A91-8C65-66D9384A1000`. This supports Samsung advertisement visibility to a foreground iPhone scanner in this setup. |
 | Advertising startup succeeded repeatedly | The export contains three `discovery_started` and three `advertising_started` events, all in the Android foreground-service, LOW_POWER, peripheral variant. No advertising/scan/service failure events are present in this export. |
-| More than a cached device name was observed | Screenshots show RSSI time series and packet entries; the owner reports fresh observations. A systematic pause/restart control and exact lock-state timeline were not supplied. |
+| More than a cached device name was observed | Screenshots show RSSI time series and packet entries; the owner reports fresh observations with the Samsung both unlocked and locked for more than five minutes. A systematic pause/restart control and exact lock-state timeline were not supplied. |
 | Signal varied with nominally close phones | Visual readings are approximately −50 to −73 dBm. This is an approximate range read from screenshots, not statistics calculated from exported packet samples. It does not establish metres or a usable near/far threshold. |
-| PC coordinator connectivity failed near the end | Six `refresh_failed`, two `action_failed` and one `pause_pending` record report failure to connect to `localhost/127.0.0.1:8787`. The cause is unknown: disconnected USB/adb forwarding, stopped server or PC sleep are possible explanations, not established facts. |
+| PC coordinator connectivity failed near the end | Six `refresh_failed`, two `action_failed` and one `pause_pending` record report failure to connect to `localhost/127.0.0.1:8787`. The owner reports not unplugging USB. Server availability, adb forwarding and PC sleep remain unverified; neither user error nor an application defect is established. |
 | No authenticated encounter was demonstrated | No `hello_received`, `exchange_complete` or `proof_accepted` events appear in the supplied log. This is expected for scanner-only nRF Connect use and does not identify a protocol defect. |
 
 The remaining event counts are one `enrolled` and three `discovery_stopped`. Those
@@ -55,8 +58,10 @@ close the lock-state gap with one bounded control if it has not already been run
 3. Pause Samsung discovery and check that new observations stop, then resume and
    verify that they restart. A cached scanner row alone is insufficient.
 
-This remains a one-direction, iPhone-foreground test. If that control has already
-been completed, annotate the evidence and proceed without repeating it.
+The subsequent clarification fills the five-minute Samsung-lock observation gap;
+do not require that observation to be repeated before the next implementation
+step. A pause/restart control remains useful during later trials. This is still
+a one-direction, iPhone-foreground test, not a both-phones-locked result.
 
 Next, use the Mac to install our own iOS client and give both native apps access
 to the same functioning HTTPS coordinator. Start with Samsung peripheral and
