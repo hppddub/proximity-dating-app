@@ -6,12 +6,18 @@ Validated source checkpoint: `5b4615b` on `prototype/feasibility`.
 The software prototype is runnable. **Physical locked-phone reliability, battery
 use, same-space accuracy, and live APNs/FCM delivery remain unmeasured.**
 
+Update October 30: the owner's first phone test shows our Samsung advertisement
+visible in nRF Connect on an iPhone. See [physical radio observations](first-radio-observations.md)
+for the screenshots/log assessment and next experiment. Lock-state timing and a
+full authenticated phone-to-phone exchange remain unverified. Software build/check
+results below refer to the original validated implementation checkpoint.
+
 ## Implemented
 
 | Plan phase | Delivered software | Evidence boundary |
 | --- | --- | --- |
 | 0: setup/protocol | Versioned protocol, toolchain configuration, Android wrapper, Xcode project, enrollment, runbook and interoperability fixture. | Device inventory is based on the owner's Mac/Samsung/iPhone access; exact phone OS/signing was not inspected remotely. |
-| 1: radio diagnostics | Kotlin and Swift native service-filtered scan/advertise and framed GATT exchange; role selection; callback logs/export; expiry and pause controls. | Both compile. No physical radio exchange has been observed. Android currently uses a foreground service; a process-waking PendingIntent scanning variant is not implemented. |
+| 1: radio diagnostics | Kotlin and Swift native service-filtered scan/advertise and framed GATT exchange; role selection; callback logs/export; expiry and pause controls. | Both compile. Samsung advertisements have been observed in a foreground iPhone scanner; an authenticated exchange remains unverified. Android currently uses a foreground service; a process-waking PendingIntent scanning variant is not implemented. |
 | 2: fresh authenticated encounter | Secure client credential storage, rotating session aliases, dual HMAC transcript verification, nonce replay prevention, dwell/freshness and duplicate handling. | Cross-language golden vector passes on Node, Android JVM and Swift/macOS. Simulated proofs exercise the coordinator; distance and live-relay resistance are not established. |
 | 3: coordinator/alerts | Transactional offer reservations, finite sessions/offers, one active introduction, cooldowns, repeat-pair suppression, generic closure, durable outbox, optional APNs/FCM adapters, HTTPS support. | Automated state/authorization tests pass. Remote provider credentials were unavailable; missing configuration is reported as `unconfigured`. Local/polling diagnostic alerts are labeled and can be disabled. |
 | 4: evaluation tooling | Observer-record validation, state/device grouping, missed-display denominator, negative-control and battery summaries, example data and runbook. | All sample observations are marked simulated and excluded from physical results. No physical study or eight-hour battery run was performed. |
@@ -68,8 +74,9 @@ formats. No production hosting or public launch was performed.
 
 ## Limits to keep visible
 
-- There were no attached physical phones. Tests cannot answer whether the Samsung
-  and a friend's iPhone discover each other promptly while locked.
+- No physical phones were attached to the development environment. The owner's
+  scanner observations support one-direction advertisement visibility; they do
+  not establish mutual discovery or both-phones-locked timing.
 - An iOS simulator build is a compiler/linker check, not a radio test. Reclamation,
   force-quit/force-stop and reboot recovery must be measured separately. The iOS
   client intentionally requires explicit session resume after process restoration.
