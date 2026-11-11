@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4f1eb">
+  <meta name="description" content="Third Spaces is building a dating app for meeting people who spend time in the same places you do.">
+  <title>Third Spaces</title>
+  <style>
+    :root {
+      color-scheme: light;
+      background: #f4f1eb;
+      color: #24211e;
+      font-family: "Baskerville", "Baskerville Old Face", "Palatino Linotype", Palatino, Georgia, serif;
+    }
+
+    body {
+      box-sizing: border-box;
+      display: grid;
+      min-height: 100vh;
+      min-height: 100svh;
+      place-items: center;
+      margin: 0;
+      padding: clamp(16px, 3vw, 44px);
+      background: #f4f1eb url("marble.png") center / cover no-repeat;
+    }
+
+    main {
+      box-sizing: border-box;
+      display: grid;
+      width: 100%;
+      min-height: calc(100svh - 2 * clamp(16px, 3vw, 44px));
+      place-items: center;
+      border: 1px solid #62574840;
+      padding: 56px 18px;
+      text-align: center;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(3rem, 10vw, 9rem);
+      font-weight: 400;
+      letter-spacing: -0.065em;
+      line-height: 0.98;
+    }
+
+    .description {
+      max-width: 27em;
+      margin: 0 auto;
+      color: #3f3a34;
+      font-size: clamp(1.1rem, 2.2vw, 1.45rem);
+      line-height: 1.5;
+      text-wrap: pretty;
+    }
+
+    .description::before {
+      display: block;
+      width: 2rem;
+      height: 1px;
+      margin: clamp(22px, 4vw, 38px) auto clamp(18px, 3vw, 28px);
+      background: #8b7a61;
+      content: "";
+    }
+
+    .founder {
+      margin: clamp(32px, 6vw, 60px) 0 0;
+      color: #50463a;
+      font-size: 0.75rem;
+      font-weight: 400;
+      letter-spacing: 0.17em;
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+<body>
+  <main aria-labelledby="startup">
+    <div>
+      <h1 id="startup">Third Spaces</h1>
+      <p class="description">A dating app for meeting people who spend time in the same places you do.</p>
+      <p class="founder">Founded by Stanley Zhou</p>
+    </div>
+  </main>
+</body>
+</html>
